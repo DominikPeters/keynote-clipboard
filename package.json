@@ -25,6 +25,7 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "prepublishOnly": "npm run build && npm run test",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run test",
     "test:watch": "vitest test",
@@ -37,7 +38,19 @@
     "clipboard",
     "parser"
   ],
-  "author": "",
+  "author": "Dominik Peters",
+  "homepage": "https://github.com/DominikPeters/keynote-clipboard#readme",
+  "bugs": {
+    "url": "https://github.com/DominikPeters/keynote-clipboard/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DominikPeters/keynote-clipboard.git"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "sideEffects": false,
   "license": "MIT",
   "dependencies": {
     "@skgrush/bplist-and-nskeyedunarchiver": "^0.0.1-rc.2"

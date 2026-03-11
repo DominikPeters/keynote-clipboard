@@ -1,5 +1,7 @@
 # keynote-clipboard
 
+![keynote-clipboard logo](https://raw.githubusercontent.com/DominikPeters/keynote-clipboard/main/demo-app/src/assets/keynote-clipboard-logo.svg)
+
 Parser for Keynote clipboard payloads (`com.apple.apps.content-language.canvas-object-1.0`).
 
 ## What it parses today
