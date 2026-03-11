@@ -177,7 +177,7 @@ describe("toSvg", () => {
     });
 
     const result = toSvg(parsed.document);
-    expect(result.svg).toContain('transform="matrix(2 0 0 1 -50 0)"');
+    expect(result.svg).toContain('transform="matrix(2 0 0 1 50 50)"');
   });
 
   it("falls back to rect when shape path is missing", () => {
@@ -307,8 +307,8 @@ describe("toSvg", () => {
     expect(result.svg).toContain('font-size="20"');
     expect(result.svg).toContain('fill="rgb(1,2,3)"');
     expect(result.svg).toContain('text-anchor="start"');
-    expect(result.svg).toContain('x="50"');
-    expect(result.svg).toContain('y="76"');
+    expect(result.svg).toContain('x="110"');
+    expect(result.svg).toContain('y="106"');
   });
 
   it("keeps top-right text inside the rectangle and renders decorations", async () => {

@@ -392,8 +392,8 @@ function computePathPlacement(
     if (sourceWidth > 0 && sourceHeight > 0) {
       const scaleX = geometry.size.width / sourceWidth;
       const scaleY = geometry.size.height / sourceHeight;
-      const tx = geometry.position.x - geometry.size.width / 2 - pathSpace.position.x * scaleX;
-      const ty = geometry.position.y - geometry.size.height / 2 - pathSpace.position.y * scaleY;
+      const tx = geometry.position.x - pathSpace.position.x * scaleX;
+      const ty = geometry.position.y - pathSpace.position.y * scaleY;
 
       return {
         transform: `matrix(${formatNum(scaleX)} 0 0 ${formatNum(scaleY)} ${formatNum(tx)} ${formatNum(ty)})`,
@@ -442,8 +442,8 @@ function computePathPlacement(
   const frameHeight = Math.max(normalizedFrame.maxY - normalizedFrame.minY, 1e-6);
   const scaleX = width / frameWidth;
   const scaleY = height / frameHeight;
-  const tx = geometry.position.x - width / 2 - normalizedFrame.minX * scaleX;
-  const ty = geometry.position.y - height / 2 - normalizedFrame.minY * scaleY;
+  const tx = geometry.position.x - normalizedFrame.minX * scaleX;
+  const ty = geometry.position.y - normalizedFrame.minY * scaleY;
 
   const bounds: Bounds = {
     minX: pathBounds.minX * scaleX + tx,
@@ -495,7 +495,7 @@ function textAnchor(
 ): (Position & { dominantBaseline: "middle" | "text-before-edge" | "text-after-edge" }) | undefined {
   const geometry = shape.geometry;
   if (geometry?.position && geometry.size) {
-    const center = geometry.position;
+    const topLeft = geometry.position;
     const size = geometry.size;
     const padding = shape.layoutProperties?.padding;
     const padLeft = padding?.left ?? 0;
@@ -503,21 +503,21 @@ function textAnchor(
     const padTop = padding?.top ?? 0;
     const padBottom = padding?.bottom ?? 0;
 
-    let x = center.x;
+    let x = topLeft.x + size.width / 2;
     if (horizontalAnchor === "start") {
-      x = center.x - size.width / 2 + padLeft;
+      x = topLeft.x + padLeft;
     } else if (horizontalAnchor === "end") {
-      x = center.x + size.width / 2 - padRight;
+      x = topLeft.x + size.width - padRight;
     }
 
     const vertical = shape.layoutProperties?.verticalAlignment;
     let dominantBaseline: "middle" | "text-before-edge" | "text-after-edge" = "middle";
-    let y = center.y;
+    let y = topLeft.y + size.height / 2;
     if (vertical === "top") {
-      y = center.y - size.height / 2 + padTop;
+      y = topLeft.y + padTop;
       dominantBaseline = "text-before-edge";
     } else if (vertical === "bottom") {
-      y = center.y + size.height / 2 - padBottom;
+      y = topLeft.y + size.height - padBottom;
       dominantBaseline = "text-after-edge";
     }
 
@@ -544,14 +544,11 @@ function geometryBounds(geometry: Geometry | undefined): Bounds | undefined {
     return undefined;
   }
 
-  const halfW = geometry.size.width / 2;
-  const halfH = geometry.size.height / 2;
-
   return {
-    minX: geometry.position.x - halfW,
-    minY: geometry.position.y - halfH,
-    maxX: geometry.position.x + halfW,
-    maxY: geometry.position.y + halfH
+    minX: geometry.position.x,
+    minY: geometry.position.y,
+    maxX: geometry.position.x + geometry.size.width,
+    maxY: geometry.position.y + geometry.size.height
   };
 }
 
