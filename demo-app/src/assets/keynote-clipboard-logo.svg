@@ -1,44 +1,50 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Keynote Clipboard Demo logo">
+<?xml version="1.0" encoding="utf-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#34c2ea"/>
-      <stop offset="1" stop-color="#2a67f2"/>
+    <linearGradient id="clipGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5BB8F5"/>
+      <stop offset="1" stop-color="#0071E3"/>
     </linearGradient>
-    <linearGradient id="board" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#f9fcff"/>
-      <stop offset="1" stop-color="#dce5ee"/>
+    <linearGradient id="surfaceGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FAFAFA"/>
+      <stop offset="1" stop-color="#E4E4EA"/>
     </linearGradient>
-    <linearGradient id="metal" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#f4f8fc"/>
-      <stop offset="0.5" stop-color="#bcc8d4"/>
-      <stop offset="1" stop-color="#f7fbff"/>
+    <linearGradient id="metalGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#B8B8C2"/>
+      <stop offset="0.4" stop-color="#D4D4DC"/>
+      <stop offset="1" stop-color="#9494A4"/>
     </linearGradient>
-    <filter id="shadow" x="-20%" y="-20%" width="140%" height="160%">
-      <feDropShadow dx="0" dy="5" stdDeviation="4" flood-color="#15305f" flood-opacity="0.22"/>
+    <linearGradient id="poleGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#D8D8E0"/>
+      <stop offset="0.35" stop-color="#F0F0F4"/>
+      <stop offset="1" stop-color="#C0C0CC"/>
+    </linearGradient>
+    <filter id="shadow" x="-5%" y="-5%" width="115%" height="115%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#00000025"/>
+    </filter>
+    <filter id="softShadow" x="-10%" y="-5%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#00000025"/>
     </filter>
   </defs>
-
-  <rect x="8" y="8" width="240" height="240" rx="48" fill="url(#bg)"/>
-
-  <g filter="url(#shadow)">
-    <rect x="64" y="36" width="128" height="16" rx="8" fill="url(#metal)"/>
-    <rect x="74" y="46" width="108" height="130" rx="12" fill="url(#board)"/>
-    <rect x="88" y="60" width="80" height="60" rx="6" fill="#eff4f9" stroke="#ced9e3"/>
-
-    <path d="M128 90 L128 68 A22 22 0 0 1 148 80 Z" fill="#59c3f0"/>
-    <path d="M128 90 L148 80 A22 22 0 0 1 145 102 Z" fill="#5bbf4d"/>
-    <path d="M128 90 L145 102 A22 22 0 0 1 127 112 Z" fill="#f2b726"/>
-    <path d="M128 90 L127 112 A22 22 0 0 1 110 104 Z" fill="#f38b2a"/>
-    <path d="M128 90 L110 104 A22 22 0 0 1 108 82 Z" fill="#ea5e55"/>
-    <path d="M128 90 L108 82 A22 22 0 0 1 128 68 Z" fill="#a652ba"/>
-
-    <rect x="120" y="176" width="16" height="18" rx="5" fill="url(#metal)"/>
-    <rect x="104" y="192" width="48" height="10" rx="5" fill="url(#metal)"/>
-
-    <rect x="98" y="145" width="60" height="34" rx="8" fill="#ffffff" stroke="#d4dee7"/>
-    <rect x="110" y="137" width="36" height="10" rx="4" fill="url(#metal)"/>
-    <line x1="108" y1="155" x2="148" y2="155" stroke="#87b5e8" stroke-width="3" stroke-linecap="round"/>
-    <line x1="108" y1="163" x2="148" y2="163" stroke="#62b88a" stroke-width="3" stroke-linecap="round"/>
-    <line x1="108" y1="171" x2="142" y2="171" stroke="#f1a73a" stroke-width="3" stroke-linecap="round"/>
+  <rect x="55.415" y="30.992" width="389.17" height="459.699" rx="28" ry="28" fill="url(#clipGrad)" filter="url(#softShadow)" style="stroke-width: 1;"/>
+  <rect x="80.675" y="79.376" width="340.448" height="393.631" rx="14" ry="14" opacity="0.95" style="stroke-width: 1; fill: rgba(240, 242, 246, 0.467);"/>
+  <rect x="170.686" y="9.582" width="162.229" height="62.144" rx="10" ry="10" fill="url(#metalGrad)" filter="url(#shadow)" style="stroke-width: 1;"/>
+  <rect x="216.312" y="22.011" width="70.975" height="19.886" rx="8" ry="8" fill="#7E7E90" opacity="0.4" style="stroke-width: 1;"/>
+  <rect x="178.29" y="17.039" width="147.02" height="4.972" rx="2" ry="2" fill="#FFFFFF" opacity="0.3" style="stroke-width: 1;"/>
+  <g filter="url(#shadow)" transform="matrix(1.105596, 0, 0, 1.237661, -33.032692, -60.415619)" style="">
+    <path d=" M154,132 L358,132 Q370,132 372,142 L386,240 Q388,252 376,252 L136,252 Q124,252 126,240 L140,142 Q142,132 154,132 Z " fill="url(#surfaceGrad)" stroke="#CDCDD6" stroke-width="1"/>
+    <line x1="136" y1="238" x2="376" y2="238" stroke-width="2.5" stroke-linecap="round" style="stroke: rgb(167, 167, 181);"/>
+    <line x1="136" y1="240" x2="376" y2="240" stroke="#FFFFFF" stroke-width="1" stroke-linecap="round" opacity="0.35"/>
+  </g>
+  <rect x="241.016" y="252.087" width="18.313" height="193.232" fill="url(#poleGrad)" style="stroke-width: 1;"/>
+  <rect x="188.988" y="441.877" width="122.665" height="13.345" rx="4" ry="4" fill="#C0C0CC" style="stroke-width: 1;"/>
+  <rect x="188.988" y="441.877" width="122.665" height="6.672" rx="2" ry="2" fill="#D8D8E2" opacity="0.6" style="stroke-width: 1;"/>
+  <g transform="matrix(1.626604, 0, 0, 1.286697, 250.572449, 168.395157)" style="">
+    <circle cx="0" cy="0" r="42" fill="#FFFFFF" stroke="#D8D8E2" stroke-width="1.5"/>
+    <path d="M0,0 L0,-39 A39,39 0 0,1 25.07,29.88 Z" fill="#3BA1F2"/>
+    <path d="M0,0 L25.07,29.88 A39,39 0 0,1 -25.07,29.88 Z" fill="#4DC44B"/>
+    <path d="M0,0 L-25.07,29.88 A39,39 0 0,1 -39,0 Z" fill="#FFC83D"/>
+    <path d="M0,0 L-39,0 A39,39 0 0,1 -25.07,-29.88 Z" fill="#FF5E5E"/>
+    <path d="M0,0 L-25.07,-29.88 A39,39 0 0,1 0,-39 Z" fill="#A86BE4"/>
   </g>
 </svg>
