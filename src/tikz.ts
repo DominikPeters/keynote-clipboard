@@ -354,14 +354,46 @@ function renderImagePlaceholder(
 }
 
 function buildPathOptions(
-  fill: { fillColor?: string; fillOpacity?: number; shadingName?: string; shadingAngle?: number },
+  fill: {
+    fillColor?: string;
+    fillOpacity?: number;
+    shadingName?: string;
+    shadingAngle?: number;
+    shadingKind?: "axis";
+    leftColor?: string;
+    rightColor?: string;
+    topColor?: string;
+    bottomColor?: string;
+    middleColor?: string;
+  },
   stroke: TikzStroke,
   markerOption: string | undefined,
   shadowOption: string | undefined
 ): string {
   const options: string[] = [];
 
-  if (fill.shadingName) {
+  if (fill.shadingKind === "axis") {
+    options.push("draw");
+    options.push("shading=axis");
+    if (fill.leftColor) {
+      options.push(`left color=${fill.leftColor}`);
+    }
+    if (fill.rightColor) {
+      options.push(`right color=${fill.rightColor}`);
+    }
+    if (fill.topColor) {
+      options.push(`top color=${fill.topColor}`);
+    }
+    if (fill.bottomColor) {
+      options.push(`bottom color=${fill.bottomColor}`);
+    }
+    if (fill.middleColor) {
+      options.push(`middle color=${fill.middleColor}`);
+    }
+    if (fill.shadingAngle !== undefined) {
+      options.push(`shading angle=${formatTikzNum(fill.shadingAngle)}`);
+    }
+  } else if (fill.shadingName) {
     options.push("draw");
     options.push(`shading=${fill.shadingName}`);
     if (fill.shadingAngle !== undefined) {
@@ -406,14 +438,39 @@ function buildPathOptions(
 function resolveShapeFill(
   shape: ShapeObject,
   context: TikzRenderContext
-): { fillColor?: string; fillOpacity?: number; shadingName?: string; shadingAngle?: number } {
+): {
+  fillColor?: string;
+  fillOpacity?: number;
+  shadingName?: string;
+  shadingAngle?: number;
+  shadingKind?: "axis";
+  leftColor?: string;
+  rightColor?: string;
+  topColor?: string;
+  bottomColor?: string;
+  middleColor?: string;
+} {
   const gradient = shape.fill?.gradient;
   if (gradient?.flavor?.kind === "linear" && gradient.stops && gradient.stops.length > 0) {
+    const axis = toAxisShading(gradient);
+    if (axis) {
+      return {
+        shadingKind: "axis",
+        leftColor: axis.leftColor,
+        rightColor: axis.rightColor,
+        topColor: axis.topColor,
+        bottomColor: axis.bottomColor,
+        middleColor: axis.middleColor,
+        shadingAngle: axis.shadingAngle,
+        fillOpacity: clamp(gradient.opacity ?? 1, 0, 1)
+      };
+    }
+
     const shading = registerLinearGradient(gradient, context);
     if (shading) {
       return {
         shadingName: shading,
-        shadingAngle: gradient.flavor.linearAngle ?? 0,
+        shadingAngle: keynoteAngleToTikzShadingAngle(gradient.flavor.linearAngle ?? 0),
         fillOpacity: clamp(gradient.opacity ?? 1, 0, 1)
       };
     }
@@ -430,6 +487,81 @@ function resolveShapeFill(
     fillColor,
     fillOpacity
   };
+}
+
+function toAxisShading(
+  gradient: NonNullable<ShapeObject["fill"]>["gradient"]
+): {
+  leftColor?: string;
+  rightColor?: string;
+  topColor?: string;
+  bottomColor?: string;
+  middleColor?: string;
+  shadingAngle?: number;
+} | undefined {
+  if (!gradient?.stops || gradient.stops.length === 0) {
+    return undefined;
+  }
+
+  const sortedStops = [...gradient.stops]
+    .filter((stop): stop is NonNullable<typeof stop> => Boolean(stop))
+    .sort((a, b) => (a.fraction ?? 0) - (b.fraction ?? 0));
+
+  if (sortedStops.length < 2) {
+    return undefined;
+  }
+
+  const first = sortedStops[0];
+  const last = sortedStops[sortedStops.length - 1];
+  const leftColor = rgbaToTikzColor(first.color?.rgba?.red, first.color?.rgba?.green, first.color?.rgba?.blue);
+  const rightColor = rgbaToTikzColor(last.color?.rgba?.red, last.color?.rgba?.green, last.color?.rgba?.blue);
+  const angle = normalizeAngle(gradient.flavor?.linearAngle ?? 0);
+  const epsilon = 0.01;
+  const isCardinal = (target: number): boolean => Math.abs(angle - target) <= epsilon;
+
+  const base: {
+    leftColor?: string;
+    rightColor?: string;
+    topColor?: string;
+    bottomColor?: string;
+    middleColor?: string;
+    shadingAngle?: number;
+  } = {};
+
+  if (isCardinal(0) || isCardinal(360)) {
+    base.leftColor = leftColor;
+    base.rightColor = rightColor;
+  } else if (isCardinal(180)) {
+    base.leftColor = rightColor;
+    base.rightColor = leftColor;
+  } else if (isCardinal(90)) {
+    base.bottomColor = leftColor;
+    base.topColor = rightColor;
+  } else if (isCardinal(270)) {
+    base.topColor = leftColor;
+    base.bottomColor = rightColor;
+  } else {
+    base.leftColor = leftColor;
+    base.rightColor = rightColor;
+    base.shadingAngle = keynoteAngleToTikzShadingAngle(angle);
+  }
+
+  if (sortedStops.length === 2) {
+    return base;
+  }
+
+  if (sortedStops.length === 3) {
+    const middle = sortedStops[1];
+    const fraction = clamp01(middle.fraction ?? 0.5);
+    if (Math.abs(fraction - 0.5) <= 0.01) {
+      return {
+        ...base,
+        middleColor: rgbaToTikzColor(middle.color?.rgba?.red, middle.color?.rgba?.green, middle.color?.rgba?.blue)
+      };
+    }
+  }
+
+  return undefined;
 }
 
 function registerLinearGradient(
@@ -458,6 +590,15 @@ function registerLinearGradient(
   const id = `kcshade${context.shadingIdCounter++}`;
   context.shadings.push(`\\pgfdeclarehorizontalshading{${id}}{100bp}{${spec.join("; ")}}`);
   return id;
+}
+
+function keynoteAngleToTikzShadingAngle(angle: number): number {
+  // Keynote reports angles in screen coordinates; TikZ axis shading is offset by 90deg.
+  return normalizeAngle(angle - 90);
+}
+
+function normalizeAngle(angle: number): number {
+  return Number((((angle % 360) + 360) % 360).toFixed(4));
 }
 
 function resolveShapeShadow(shape: ShapeObject): string | undefined {
@@ -511,13 +652,13 @@ function normalizeMarkerStyle(raw: unknown): string | undefined {
 function markerToArrowTip(style: string | undefined): string | undefined {
   switch (style) {
     case "simple_arrow":
-      return "Stealth";
+      return "Triangle";
     case "open_arrow":
-      return "Stealth[open]";
+      return "Straight Barb";
     case "filled_arrow":
-      return "Latex";
+      return "Stealth";
     case "inverted_arrow":
-      return "Stealth[reversed]";
+      return "Triangle[reversed]";
     case "filled_circle":
       return "Circle";
     case "open_circle":
@@ -596,6 +737,7 @@ function extractTextStyle(
   fontSize: number;
   fill: string;
   textAnchor: "start" | "middle" | "end";
+  italic: boolean;
   underline: boolean;
   strikethrough: boolean;
 } {
@@ -651,6 +793,7 @@ function extractTextStyle(
     fontSize,
     fill,
     textAnchor,
+    italic: /italic|oblique/i.test(fontFamily),
     underline: Boolean(textStyle?.underline),
     strikethrough: Boolean(textStyle?.strikethrough)
   };
@@ -662,15 +805,20 @@ function buildTextNodeOptions(
     fontSize: number;
     fill: string;
     textAnchor: "start" | "middle" | "end";
+    italic: boolean;
   },
   dominantBaseline: "middle" | "text-before-edge" | "text-after-edge"
 ): string {
   const anchor = tikzTextAnchor(style.textAnchor, dominantBaseline);
   const lineHeight = style.fontSize * 1.2;
+  const fontParts = [`\\fontsize{${formatTikzNum(style.fontSize)}}{${formatTikzNum(lineHeight)}}\\selectfont`];
+  if (style.italic) {
+    fontParts.push("\\itshape");
+  }
   const options = [
     `anchor=${anchor}`,
     `text=${style.fill}`,
-    `font=\\fontsize{${formatTikzNum(style.fontSize)}}{${formatTikzNum(lineHeight)}}\\selectfont`
+    `font=${fontParts.join("")}`
   ];
 
   return options.join(",");
@@ -1318,7 +1466,9 @@ function cssColorToTikzColor(input: string | undefined): string | undefined {
 }
 
 function escapeLatex(value: string): string {
-  return value
+  const sanitized = sanitizeLatexInput(value);
+
+  return sanitized
     .replaceAll("\\", "\\textbackslash{}")
     .replaceAll("{", "\\{")
     .replaceAll("}", "\\}")
@@ -1329,6 +1479,13 @@ function escapeLatex(value: string): string {
     .replaceAll("_", "\\_")
     .replaceAll("^", "\\textasciicircum{}")
     .replaceAll("~", "\\textasciitilde{}");
+}
+
+function sanitizeLatexInput(value: string): string {
+  return value
+    .replaceAll("\u00A0", " ")
+    .replaceAll(/[\u200B\u200C\u200D\u2060\uFEFF]/g, "")
+    .replaceAll(/[\u200E\u200F\u202A-\u202E\u2066-\u2069]/g, "");
 }
 
 function clamp(value: number, min: number, max: number): number {

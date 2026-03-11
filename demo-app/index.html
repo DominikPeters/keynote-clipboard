@@ -11,31 +11,41 @@
     <main class="app-shell">
       <header class="window-toolbar">
         <div class="toolbar-leading">
-          <img src="/src/assets/keynote-clipboard-logo.svg" alt="App logo" class="app-icon" />
+          <img src="/src/assets/keynote-clipboard-logo.png" alt="App logo" class="app-icon" />
           <div class="window-titles">
             <h1>Clipboard Preview</h1>
           </div>
         </div>
 
-        <button id="refresh-btn" class="toolbar-button" type="button">Refresh</button>
+        <div class="toolbar-trailing">
+          <div id="preview-mode-toggle" class="mode-toggle" hidden>
+            <button id="mode-svg-btn" class="mode-btn" type="button" data-mode="svg" aria-pressed="true">
+              SVG
+            </button>
+            <button id="mode-tikz-btn" class="mode-btn" type="button" data-mode="tikz" aria-pressed="false">
+              TikZ
+            </button>
+          </div>
+          <button id="refresh-btn" class="toolbar-button" type="button">Refresh</button>
+        </div>
       </header>
 
       <section class="workspace">
         <div class="canvas-region">
           <div class="stage-wrap">
-            <div id="svg-preview" class="svg-stage muted">No SVG rendered yet.</div>
+            <div id="preview-stage" class="preview-stage muted">No preview rendered yet.</div>
           </div>
         </div>
 
         <aside class="inspector">
           <p id="payload-meta" class="inspector-meta subtle">No payload loaded.</p>
 
-          <details class="inspector-group" open>
+          <details class="inspector-group">
             <summary>Clipboard Summary</summary>
             <pre id="standard-dump">{}</pre>
           </details>
 
-          <details class="inspector-group" open>
+          <details class="inspector-group">
             <summary>Render Stats</summary>
             <pre id="stats-dump">{}</pre>
           </details>
@@ -43,6 +53,16 @@
           <details class="inspector-group">
             <summary>Diagnostics</summary>
             <pre id="diagnostics-dump">[]</pre>
+          </details>
+
+          <details class="inspector-group">
+            <summary>SVG Output</summary>
+            <textarea id="svg-output" readonly></textarea>
+          </details>
+
+          <details class="inspector-group">
+            <summary>TikZ Output</summary>
+            <textarea id="tikz-output" readonly></textarea>
           </details>
 
           <details class="inspector-group">

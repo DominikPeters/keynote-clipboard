@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   KEYNOTE_CLIPBOARD_FORMAT,
   applyClipboardChange,
-  convertPayloadToSvg,
+  convertPayload,
   hasKeynoteFormat,
   type CustomClipboardPayload
 } from "./clipboardLogic";
@@ -15,8 +15,8 @@ describe("hasKeynoteFormat", () => {
   });
 });
 
-describe("convertPayloadToSvg", () => {
-  it("returns svg and diagnostics on valid payload", () => {
+describe("convertPayload", () => {
+  it("returns both svg and tikz outputs on valid payload", () => {
     const payload: CustomClipboardPayload = {
       format: KEYNOTE_CLIPBOARD_FORMAT,
       size: 8,
@@ -24,27 +24,47 @@ describe("convertPayloadToSvg", () => {
       base64: "e30="
     };
 
-    const result = convertPayloadToSvg(payload, () => ({
-      svg: "<svg></svg>",
-      diagnostics: [{ code: "x", message: "ok", severity: "warning" }],
-      stats: {
-        renderedShapes: 1,
-        renderedConnectionLines: 0,
-        renderedTextNodes: 0,
-        renderedImagePlaceholders: 0,
-        skippedObjects: 0
-      }
-    }));
+    const result = convertPayload(payload, {
+      toSvg: () => ({
+        svg: "<svg></svg>",
+        diagnostics: [{ code: "svg", message: "ok", severity: "warning" }],
+        stats: {
+          renderedShapes: 1,
+          renderedConnectionLines: 0,
+          renderedTextNodes: 0,
+          renderedImagePlaceholders: 0,
+          skippedObjects: 0
+        }
+      }),
+      toTikz: () => ({
+        tikz: "\\documentclass[tikz]{standalone}",
+        diagnostics: [{ code: "tikz", message: "ok", severity: "warning" }],
+        stats: {
+          renderedShapes: 1,
+          renderedConnectionLines: 0,
+          renderedTextNodes: 0,
+          renderedImagePlaceholders: 0,
+          skippedObjects: 0
+        }
+      })
+    });
 
     expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.svg).toContain("<svg>");
-      expect(result.diagnostics).toHaveLength(1);
-      expect(result.stats.renderedShapes).toBe(1);
+    expect(result.svg.ok).toBe(true);
+    expect(result.tikz.ok).toBe(true);
+    if (result.svg.ok) {
+      expect(result.svg.output).toContain("<svg>");
+      expect(result.svg.diagnostics).toHaveLength(1);
+      expect(result.svg.stats.renderedShapes).toBe(1);
+    }
+    if (result.tikz.ok) {
+      expect(result.tikz.output).toContain("\\documentclass");
+      expect(result.tikz.diagnostics).toHaveLength(1);
+      expect(result.tikz.stats.renderedShapes).toBe(1);
     }
   });
 
-  it("returns error when conversion throws (invalid JSON flow)", () => {
+  it("keeps mode-specific failure details when one converter throws", () => {
     const payload: CustomClipboardPayload = {
       format: KEYNOTE_CLIPBOARD_FORMAT,
       size: 3,
@@ -52,17 +72,32 @@ describe("convertPayloadToSvg", () => {
       base64: "e3g="
     };
 
-    const result = convertPayloadToSvg(payload, () => {
-      throw new Error("Invalid JSON input");
+    const result = convertPayload(payload, {
+      toSvg: () => {
+        throw new Error("Invalid JSON input for SVG");
+      },
+      toTikz: () => ({
+        tikz: "\\documentclass[tikz]{standalone}",
+        diagnostics: [],
+        stats: {
+          renderedShapes: 0,
+          renderedConnectionLines: 0,
+          renderedTextNodes: 0,
+          renderedImagePlaceholders: 0,
+          skippedObjects: 1
+        }
+      })
     });
 
     expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.error).toContain("Invalid JSON");
+    expect(result.svg.ok).toBe(false);
+    expect(result.tikz.ok).toBe(true);
+    if (!result.svg.ok) {
+      expect(result.svg.error).toContain("Invalid JSON input for SVG");
     }
   });
 
-  it("returns error for missing UTF-8 payload", () => {
+  it("returns mode-specific errors for missing UTF-8 payload", () => {
     const payload: CustomClipboardPayload = {
       format: KEYNOTE_CLIPBOARD_FORMAT,
       size: 0,
@@ -70,8 +105,16 @@ describe("convertPayloadToSvg", () => {
       base64: ""
     };
 
-    const result = convertPayloadToSvg(payload);
+    const result = convertPayload(payload);
     expect(result.ok).toBe(false);
+    expect(result.svg.ok).toBe(false);
+    expect(result.tikz.ok).toBe(false);
+    if (!result.svg.ok) {
+      expect(result.svg.error).toContain("UTF-8");
+    }
+    if (!result.tikz.ok) {
+      expect(result.tikz.error).toContain("UTF-8");
+    }
   });
 });
 

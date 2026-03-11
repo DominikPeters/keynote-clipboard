@@ -71,7 +71,7 @@ describe("toTikz", () => {
     expect(arrowsTikz.tikz).toContain("arrows=");
   });
 
-  it("renders gradient shadings and shadows", () => {
+  it("prefers built-in axis shading and renders shadows", () => {
     const parsed = parseKeynoteClipboard({
       "0": {
         type_identifier: "com.apple.apps.content-language.shape",
@@ -137,9 +137,73 @@ describe("toTikz", () => {
     });
 
     const result = toTikz(parsed.document);
+    expect(result.tikz).toContain("shading=axis");
+    expect(result.tikz).toContain("bottom color={rgb,255:red,255;green,0;blue,0}");
+    expect(result.tikz).toContain("top color={rgb,255:red,0;green,0;blue,255}");
+    expect(result.tikz).toContain("drop shadow=");
+  });
+
+  it("maps 180deg gradients to right-to-left for axis shading", () => {
+    const parsed = parseKeynoteClipboard({
+      "0": {
+        type_identifier: "com.apple.apps.content-language.shape",
+        stroke: "empty",
+        geometry: {
+          position: { x: 100, y: 100 },
+          size: { width: 100, height: 100 }
+        },
+        fill: {
+          gradient: {
+            flavor: {
+              linear: {
+                angle: 180
+              }
+            },
+            stops: [
+              { fraction: 0, color: { rgba: { red: 1, green: 0, blue: 0, alpha: 1 } } },
+              { fraction: 1, color: { rgba: { red: 0, green: 0, blue: 1, alpha: 1 } } }
+            ]
+          }
+        }
+      }
+    });
+
+    const result = toTikz(parsed.document);
+    expect(result.tikz).toContain("shading=axis");
+    expect(result.tikz).toContain("left color={rgb,255:red,0;green,0;blue,255}");
+    expect(result.tikz).toContain("right color={rgb,255:red,255;green,0;blue,0}");
+    expect(result.tikz).not.toContain("shading angle=");
+  });
+
+  it("falls back to declared shadings for complex multi-stop gradients", () => {
+    const parsed = parseKeynoteClipboard({
+      "0": {
+        type_identifier: "com.apple.apps.content-language.shape",
+        stroke: "empty",
+        geometry: {
+          position: { x: 100, y: 100 },
+          size: { width: 100, height: 100 }
+        },
+        fill: {
+          gradient: {
+            flavor: {
+              linear: {
+                angle: 45
+              }
+            },
+            stops: [
+              { fraction: 0, color: { rgba: { red: 1, green: 0, blue: 0, alpha: 1 } } },
+              { fraction: 0.25, color: { rgba: { red: 1, green: 1, blue: 0, alpha: 1 } } },
+              { fraction: 1, color: { rgba: { red: 0, green: 0, blue: 1, alpha: 1 } } }
+            ]
+          }
+        }
+      }
+    });
+
+    const result = toTikz(parsed.document);
     expect(result.tikz).toContain("\\pgfdeclarehorizontalshading");
     expect(result.tikz).toContain("shading=kcshade0");
-    expect(result.tikz).toContain("drop shadow=");
   });
 
   it("uses pt-to-cm conversion ratio with 2-decimal rounding", () => {
@@ -191,6 +255,55 @@ describe("toTikz", () => {
     expect(result.tikz).toContain("\\documentclass[tikz]{standalone}");
     expect(result.tikz).toContain("\\begin{document}");
     expect(result.tikz).toContain("\\end{document}");
+  });
+
+  it("renders italic text styling in tikz nodes", () => {
+    const parsed = parseKeynoteClipboard({
+      "0": {
+        type_identifier: "com.apple.apps.content-language.shape",
+        stroke: "empty",
+        geometry: {
+          position: { x: 100, y: 100 },
+          size: { width: 120, height: 60 }
+        },
+        text: {
+          attributed_string: ["Hello TikZ", {}]
+        }
+      }
+    });
+
+    const text = parsed.document.shapes[0].text;
+    if (text) {
+      text.style = {
+        fontFamily: "HelveticaNeue-Italic",
+        fontSize: 20
+      };
+    }
+
+    const result = toTikz(parsed.document);
+    expect(result.tikz).toContain("\\itshape");
+  });
+
+  it("sanitizes zero-width and bidi unicode controls in text", () => {
+    const parsed = parseKeynoteClipboard({
+      "0": {
+        type_identifier: "com.apple.apps.content-language.shape",
+        stroke: "empty",
+        geometry: {
+          position: { x: 100, y: 100 },
+          size: { width: 120, height: 60 }
+        },
+        text: {
+          attributed_string: ["Hello\u200B \u2066TikZ\u2069", {}]
+        }
+      }
+    });
+
+    const result = toTikz(parsed.document);
+    expect(result.tikz).toContain("Hello TikZ");
+    expect(result.tikz).not.toContain("\u200B");
+    expect(result.tikz).not.toContain("\u2066");
+    expect(result.tikz).not.toContain("\u2069");
   });
 
   it("toTikzFromClipboard includes parse and tikz diagnostics", async () => {
