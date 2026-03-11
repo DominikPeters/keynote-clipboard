@@ -17,6 +17,13 @@ The parser is lenient: unknown fields are preserved and surfaced as diagnostics.
 - Uses auto-bounds canvas sizing and center-anchor geometry placement.
 - Prioritizes stable, useful output over pixel-perfect Keynote fidelity.
 
+## TikZ conversion (v1)
+
+- Supports shapes, connection lines, basic text, and image placeholders.
+- Converts Keynote points to TikZ unit-less coordinates (cm) using `2.54 / 72.27`.
+- Rounds converted coordinate/size values to 2 decimal digits.
+- Supports snippet output (default) and standalone LaTeX output.
+
 ## Install
 
 ```bash
@@ -28,6 +35,7 @@ npm install keynote-clipboard
 ```ts
 import { parseKeynoteClipboard, parseKeynoteClipboardFile } from "keynote-clipboard";
 import { toSvg, toSvgFromClipboard } from "keynote-clipboard";
+import { toTikz, toTikzFromClipboard } from "keynote-clipboard";
 
 const resultFromJson = parseKeynoteClipboard(rawClipboardJsonString);
 const resultFromFile = await parseKeynoteClipboardFile("./complex-keynote-clipboard.json");
@@ -40,6 +48,12 @@ console.log(svg.svg);
 
 const directSvg = toSvgFromClipboard(rawClipboardJsonString);
 console.log(directSvg.stats);
+
+const tikz = toTikz(resultFromFile.document);
+console.log(tikz.tikz);
+
+const standaloneTikz = toTikzFromClipboard(rawClipboardJsonString, {}, { standalone: true });
+console.log(standaloneTikz.stats);
 ```
 
 ## API
@@ -49,6 +63,8 @@ console.log(directSvg.stats);
 - `decodeArchivedValue(base64)`
 - `toSvg(document, options?)`
 - `toSvgFromClipboard(input, parseOptions?, svgOptions?)`
+- `toTikz(document, options?)`
+- `toTikzFromClipboard(input, parseOptions?, tikzOptions?)`
 
 Default parse options:
 
@@ -61,13 +77,16 @@ Default parse options:
 ```bash
 keynote-clipboard inspect complex-keynote-clipboard.json --pretty --diagnostics
 keynote-clipboard svg complex-keynote-clipboard.json --out slide.svg
+keynote-clipboard tikz complex-keynote-clipboard.json --out slide.tikz
+keynote-clipboard tikz complex-keynote-clipboard.json --standalone --out slide.tex
 ```
 
 Flags:
 
 - `--pretty`: pretty-print JSON output
 - `--diagnostics`: include diagnostics in output
-- `--out <path>`: write SVG output to a file (svg command)
+- `--standalone`: emit standalone LaTeX output (tikz command)
+- `--out <path>`: write SVG/TikZ output to a file (svg/tikz commands)
 
 ## Development
 

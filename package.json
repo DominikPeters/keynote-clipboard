@@ -29,7 +29,8 @@
     "test": "vitest run test",
     "test:watch": "vitest test",
     "inspect": "tsx src/cli.ts inspect complex-keynote-clipboard.json --pretty --diagnostics",
-    "svg": "tsx src/cli.ts svg complex-keynote-clipboard.json --out example.svg --diagnostics --pretty"
+    "svg": "tsx src/cli.ts svg complex-keynote-clipboard.json --out example.svg --diagnostics --pretty",
+    "tikz": "tsx src/cli.ts tikz complex-keynote-clipboard.json --out example.tikz --diagnostics --pretty"
   },
   "keywords": [
     "keynote",

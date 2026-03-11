@@ -268,3 +268,25 @@ export interface SvgResult {
   diagnostics: Diagnostic[];
   stats: SvgStats;
 }
+
+export interface TikzOptions {
+  canvas?: "auto-bounds";
+  anchorMode?: "center";
+  includeDiagnostics?: boolean;
+  background?: string;
+  standalone?: boolean;
+}
+
+export interface TikzStats {
+  renderedShapes: number;
+  renderedConnectionLines: number;
+  renderedTextNodes: number;
+  renderedImagePlaceholders: number;
+  skippedObjects: number;
+}
+
+export interface TikzResult {
+  tikz: string;
+  diagnostics: Diagnostic[];
+  stats: TikzStats;
+}

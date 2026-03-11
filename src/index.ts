@@ -1,6 +1,7 @@
 export { decodeArchivedValue, isLikelyBplistBase64, sanitizeForJson } from "./archive.js";
 export { normalizeTopLevelEntries, parseKeynoteClipboard, parseKeynoteClipboardFile } from "./parser.js";
 export { toSvg, toSvgFromClipboard } from "./svg.js";
+export { toTikz, toTikzFromClipboard } from "./tikz.js";
 
 export type {
   ConnectionLineObject,
@@ -17,6 +18,9 @@ export type {
   ParsedText,
   ShapeObject,
   Stroke,
+  TikzOptions,
+  TikzResult,
+  TikzStats,
   SvgOptions,
   SvgResult,
   SvgStats,
