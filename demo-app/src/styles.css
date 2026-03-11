@@ -32,6 +32,17 @@ body {
   color: var(--text);
   background: var(--window-bg);
   overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+p, h1, .preview-stage {
+  cursor: default;
+}
+
+svg {
+  user-select: auto;
+  -webkit-user-select: auto;
 }
 
 button,
