@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="/src/styles.css" />
+    <title>Keynote Clipboard SVG Demo</title>
+    <script type="module" src="/src/main.ts" defer></script>
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="window-toolbar">
+        <div class="toolbar-leading">
+          <img src="/src/assets/keynote-clipboard-logo.svg" alt="App logo" class="app-icon" />
+          <div class="window-titles">
+            <h1>Clipboard Preview</h1>
+          </div>
+        </div>
+
+        <button id="refresh-btn" class="toolbar-button" type="button">Refresh</button>
+      </header>
+
+      <section class="workspace">
+        <div class="canvas-region">
+          <div class="stage-wrap">
+            <div id="svg-preview" class="svg-stage muted">No SVG rendered yet.</div>
+          </div>
+        </div>
+
+        <aside class="inspector">
+          <p id="payload-meta" class="inspector-meta subtle">No payload loaded.</p>
+
+          <details class="inspector-group" open>
+            <summary>Clipboard Summary</summary>
+            <pre id="standard-dump">{}</pre>
+          </details>
+
+          <details class="inspector-group" open>
+            <summary>Render Stats</summary>
+            <pre id="stats-dump">{}</pre>
+          </details>
+
+          <details class="inspector-group">
+            <summary>Diagnostics</summary>
+            <pre id="diagnostics-dump">[]</pre>
+          </details>
+
+          <details class="inspector-group">
+            <summary>UTF-8 Payload</summary>
+            <textarea id="payload-text" readonly></textarea>
+          </details>
+
+          <details class="inspector-group">
+            <summary>Base64 Payload</summary>
+            <textarea id="payload-base64" readonly></textarea>
+          </details>
+        </aside>
+      </section>
+    </main>
+  </body>
+</html>
