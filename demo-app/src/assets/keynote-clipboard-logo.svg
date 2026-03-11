@@ -26,20 +26,20 @@
       <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#00000025"/>
     </filter>
   </defs>
-  <rect x="55.415" y="30.992" width="389.17" height="459.699" rx="28" ry="28" fill="url(#clipGrad)" filter="url(#softShadow)" style="stroke-width: 1;"/>
-  <rect x="80.675" y="79.376" width="340.448" height="393.631" rx="14" ry="14" opacity="0.95" style="stroke-width: 1; fill: rgba(240, 242, 246, 0.467);"/>
-  <rect x="170.686" y="9.582" width="162.229" height="62.144" rx="10" ry="10" fill="url(#metalGrad)" filter="url(#shadow)" style="stroke-width: 1;"/>
-  <rect x="216.312" y="22.011" width="70.975" height="19.886" rx="8" ry="8" fill="#7E7E90" opacity="0.4" style="stroke-width: 1;"/>
-  <rect x="178.29" y="17.039" width="147.02" height="4.972" rx="2" ry="2" fill="#FFFFFF" opacity="0.3" style="stroke-width: 1;"/>
-  <g filter="url(#shadow)" transform="matrix(1.105596, 0, 0, 1.237661, -33.032692, -60.415619)" style="">
+  <rect x="55.415" y="34.576" width="389.17" height="441.2" rx="28" ry="28" fill="url(#clipGrad)" filter="url(#softShadow)" style="stroke-width: 1;"/>
+  <rect x="80.675" y="81.329" width="340.448" height="370.915" rx="14" ry="14" opacity="0.95" style="stroke-width: 1; fill: rgba(240, 242, 246, 0.357);"/>
+  <rect x="170.686" y="13.888" width="162.229" height="60.049" rx="10" ry="10" fill="url(#metalGrad)" filter="url(#shadow)" style="stroke-width: 1;"/>
+  <rect x="216.312" y="25.898" width="70.975" height="19.216" rx="8" ry="8" fill="#7E7E90" opacity="0.4" style="stroke-width: 1;"/>
+  <rect x="178.29" y="21.093" width="147.02" height="4.805" rx="2" ry="2" fill="#FFFFFF" opacity="0.3" style="stroke-width: 1;"/>
+  <g filter="url(#shadow)" transform="matrix(1.105596, 0, 0, 1.286997, -33.032692, -65.769951)" style="">
     <path d=" M154,132 L358,132 Q370,132 372,142 L386,240 Q388,252 376,252 L136,252 Q124,252 126,240 L140,142 Q142,132 154,132 Z " fill="url(#surfaceGrad)" stroke="#CDCDD6" stroke-width="1"/>
     <line x1="136" y1="238" x2="376" y2="238" stroke-width="2.5" stroke-linecap="round" style="stroke: rgb(167, 167, 181);"/>
     <line x1="136" y1="240" x2="376" y2="240" stroke="#FFFFFF" stroke-width="1" stroke-linecap="round" opacity="0.35"/>
   </g>
-  <rect x="241.016" y="252.087" width="18.313" height="193.232" fill="url(#poleGrad)" style="stroke-width: 1;"/>
-  <rect x="188.988" y="441.877" width="122.665" height="13.345" rx="4" ry="4" fill="#C0C0CC" style="stroke-width: 1;"/>
-  <rect x="188.988" y="441.877" width="122.665" height="6.672" rx="2" ry="2" fill="#D8D8E2" opacity="0.6" style="stroke-width: 1;"/>
-  <g transform="matrix(1.626604, 0, 0, 1.286697, 250.572449, 168.395157)" style="">
+  <rect x="241.016" y="259.134" width="18.313" height="169.074" fill="url(#poleGrad)" style="stroke-width: 1;"/>
+  <rect x="188.361" y="421.84" width="122.665" height="12.896" rx="4" ry="4" fill="#C0C0CC" style="stroke-width: 1;"/>
+  <rect x="188.361" y="421.84" width="122.665" height="6.447" rx="2" ry="2" fill="#D8D8E2" opacity="0.6" style="stroke-width: 1;"/>
+  <g transform="matrix(1.674969, 0, 0, 1.280289, 251.305862, 172.021408)" style="">
     <circle cx="0" cy="0" r="42" fill="#FFFFFF" stroke="#D8D8E2" stroke-width="1.5"/>
     <path d="M0,0 L0,-39 A39,39 0 0,1 25.07,29.88 Z" fill="#3BA1F2"/>
     <path d="M0,0 L25.07,29.88 A39,39 0 0,1 -25.07,29.88 Z" fill="#4DC44B"/>
