@@ -26,9 +26,10 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "inspect": "tsx src/cli.ts inspect complex-keynote-clipboard.json --pretty --diagnostics"
+    "test": "vitest run test",
+    "test:watch": "vitest test",
+    "inspect": "tsx src/cli.ts inspect complex-keynote-clipboard.json --pretty --diagnostics",
+    "svg": "tsx src/cli.ts svg complex-keynote-clipboard.json --out example.svg --diagnostics --pretty"
   },
   "keywords": [
     "keynote",

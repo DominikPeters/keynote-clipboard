@@ -18,11 +18,7 @@ export function decodeArchivedValue(base64: string): DecodedArchiveResult {
   }
 
   try {
-    const nodeBuffer = Buffer.from(base64, "base64");
-    const arrayBuffer = nodeBuffer.buffer.slice(
-      nodeBuffer.byteOffset,
-      nodeBuffer.byteOffset + nodeBuffer.byteLength
-    );
+    const arrayBuffer = base64ToArrayBuffer(base64);
 
     const logger = buildLeveledLogger({ logger: console, level: LogLevel.error });
     const reader = new Reader(arrayBuffer, logger);
@@ -45,6 +41,36 @@ export function decodeArchivedValue(base64: string): DecodedArchiveResult {
       error: error instanceof Error ? error.message : String(error)
     };
   }
+}
+
+function base64ToArrayBuffer(base64: string): ArrayBuffer {
+  const maybeBuffer = (globalThis as { Buffer?: unknown }).Buffer;
+  if (
+    maybeBuffer &&
+    typeof maybeBuffer === "function" &&
+    "from" in maybeBuffer &&
+    typeof (maybeBuffer as { from?: unknown }).from === "function"
+  ) {
+    const nodeBuffer = (maybeBuffer as { from: (input: string, encoding: string) => Uint8Array }).from(
+      base64,
+      "base64"
+    );
+    const view = new Uint8Array(nodeBuffer.buffer, nodeBuffer.byteOffset, nodeBuffer.byteLength);
+    const bytes = new Uint8Array(view.byteLength);
+    bytes.set(view);
+    return bytes.buffer;
+  }
+
+  if (typeof globalThis.atob === "function") {
+    const binary = globalThis.atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i += 1) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes.buffer;
+  }
+
+  throw new Error("No base64 decoder available in this runtime (Buffer/atob missing)");
 }
 
 function tryResolveNSKeyedArchive(input: unknown): unknown | null {
@@ -160,7 +186,13 @@ export function sanitizeForJson(value: unknown): unknown {
   }
 
   if (value instanceof ArrayBuffer) {
-    return { type: "ArrayBuffer", byteLength: value.byteLength };
+    const bytes = new Uint8Array(value);
+    const ascii = tryDecodeAscii(bytes);
+    return {
+      type: "ArrayBuffer",
+      byteLength: value.byteLength,
+      ...(ascii ? { ascii } : {})
+    };
   }
 
   if (Array.isArray(value)) {
@@ -176,4 +208,23 @@ export function sanitizeForJson(value: unknown): unknown {
   }
 
   return value;
+}
+
+function tryDecodeAscii(bytes: Uint8Array): string | undefined {
+  if (bytes.length === 0 || bytes.length > 128) {
+    return undefined;
+  }
+
+  let out = "";
+  for (const byte of bytes) {
+    if (byte === 0) {
+      continue;
+    }
+    if (byte < 32 || byte > 126) {
+      return undefined;
+    }
+    out += String.fromCharCode(byte);
+  }
+
+  return out.length > 0 ? out : undefined;
 }

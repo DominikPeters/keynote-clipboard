@@ -1,11 +1,11 @@
-import { readFile } from "node:fs/promises";
-
 import { decodeArchivedValue, isLikelyBplistBase64 } from "./archive.js";
 import type {
+  Color,
   ConnectionLineEnd,
   ConnectionLineObject,
   Diagnostic,
   Fill,
+  FillGradientFlavor,
   Geometry,
   ImageObject,
   ImageResource,
@@ -14,12 +14,16 @@ import type {
   NormalizedTopLevelEntry,
   ParseOptions,
   ParseResult,
+  ParsedPath,
   ParsedText,
   Position,
+  ShapeLayoutProperties,
   ShapeObject,
+  ShapeShadow,
   Size,
   Stroke,
   StrokeLine,
+  TextStyle,
   UnknownObject
 } from "./types.js";
 
@@ -129,6 +133,7 @@ export async function parseKeynoteClipboardFile(
   filePath: string,
   options: ParseOptions = {}
 ): Promise<ParseResult> {
+  const { readFile } = await import("node:fs/promises");
   const content = await readFile(filePath, "utf8");
   return parseKeynoteClipboard(content, options);
 }
@@ -202,7 +207,9 @@ function parseShape(
     stroke: parseStroke(raw.stroke),
     geometry: parseGeometry(raw.geometry),
     path: parsePath(raw.path),
-    text: parseText(raw.text, options, entry.sourceIndex, addDiagnostic)
+    text: parseText(raw.text, options, entry.sourceIndex, addDiagnostic),
+    layoutProperties: parseLayoutProperties(raw.layout_properties),
+    shadow: parseShadow(raw.shadow)
   };
 }
 
@@ -241,26 +248,73 @@ function parseFill(raw: unknown): Fill | undefined {
     return undefined;
   }
 
-  const colorRaw = raw.color;
-  if (!isObject(colorRaw)) {
+  const color = parseColor(raw.color);
+  const gradient = parseGradient(raw.gradient);
+
+  if (!color && !gradient) {
     return {};
   }
 
-  const rgbaRaw = colorRaw.rgba;
-  if (!isObject(rgbaRaw)) {
-    return { color: {} };
+  return {
+    color,
+    gradient
+  };
+}
+
+function parseColor(raw: unknown): Color | undefined {
+  if (!isObject(raw) || !isObject(raw.rgba)) {
+    return undefined;
+  }
+
+  const rgbaRaw = raw.rgba;
+  return {
+    rgba: {
+      colorSpace: getString(rgbaRaw.color_space),
+      red: getNumber(rgbaRaw.red),
+      green: getNumber(rgbaRaw.green),
+      blue: getNumber(rgbaRaw.blue),
+      alpha: getNumber(rgbaRaw.alpha)
+    }
+  };
+}
+
+function parseGradient(raw: unknown): Fill["gradient"] | undefined {
+  if (!isObject(raw)) {
+    return undefined;
+  }
+
+  const stops = Array.isArray(raw.stops)
+    ? raw.stops
+        .filter((stop): stop is Record<string, unknown> => isObject(stop))
+        .map((stop) => ({
+          fraction: getNumber(stop.fraction),
+          inflection: getNumber(stop.inflection),
+          color: parseColor(stop.color)
+        }))
+    : undefined;
+
+  return {
+    opacity: getNumber(raw.opacity),
+    flavor: parseGradientFlavor(raw.flavor),
+    stops
+  };
+}
+
+function parseGradientFlavor(raw: unknown): FillGradientFlavor | undefined {
+  if (!isObject(raw)) {
+    return undefined;
+  }
+
+  if (isObject(raw.linear)) {
+    return {
+      kind: "linear",
+      linearAngle: getNumber(raw.linear.angle)
+    };
   }
 
   return {
-    color: {
-      rgba: {
-        colorSpace: getString(rgbaRaw.color_space),
-        red: getNumber(rgbaRaw.red),
-        green: getNumber(rgbaRaw.green),
-        blue: getNumber(rgbaRaw.blue),
-        alpha: getNumber(rgbaRaw.alpha)
-      }
-    }
+    kind: "unknown",
+    raw
   };
 }
 
@@ -348,12 +402,77 @@ function parseSize(raw: unknown): Size | undefined {
   return { width, height };
 }
 
-function parsePath(raw: unknown): { bezierPath?: string } | undefined {
+function parsePath(raw: unknown): ParsedPath | undefined {
   if (!isObject(raw) || !isObject(raw.bezier)) {
     return undefined;
   }
 
-  return { bezierPath: getString(raw.bezier.path) };
+  return {
+    bezierPath: getString(raw.bezier.path),
+    space: parseRectSpace(raw.bezier.space)
+  };
+}
+
+function parseRectSpace(raw: unknown): ParsedPath["space"] | undefined {
+  if (!isObject(raw)) {
+    return undefined;
+  }
+
+  return {
+    position: parsePosition(raw.position),
+    size: parseSize(raw.size)
+  };
+}
+
+function parseLayoutProperties(raw: unknown): ShapeLayoutProperties | undefined {
+  if (!isObject(raw)) {
+    return undefined;
+  }
+
+  return {
+    verticalAlignment: getString(raw.vertical_alignment),
+    shrinkToFit: getBoolean(raw.shrink_to_fit),
+    padding: parseInsets(raw.padding)
+  };
+}
+
+function parseInsets(raw: unknown): ShapeLayoutProperties["padding"] | undefined {
+  if (!isObject(raw)) {
+    return undefined;
+  }
+
+  return {
+    top: getNumber(raw.top),
+    left: getNumber(raw.left),
+    right: getNumber(raw.right),
+    bottom: getNumber(raw.bottom)
+  };
+}
+
+function parseShadow(raw: unknown): ShapeShadow | undefined {
+  if (!isObject(raw)) {
+    return undefined;
+  }
+
+  return {
+    dropShadow: parseShadowValue(raw.dropShadow),
+    contactShadow: parseShadowValue(raw.contactShadow)
+  };
+}
+
+function parseShadowValue(raw: unknown): ShapeShadow["dropShadow"] | undefined {
+  if (!isObject(raw)) {
+    return undefined;
+  }
+
+  return {
+    color: parseColor(raw.color),
+    opacity: getNumber(raw.opacity),
+    angle: getNumber(raw.angle),
+    radius: getNumber(raw.radius),
+    offset: getNumber(raw.offset),
+    height: getNumber(raw.height)
+  };
 }
 
 function parseText(
@@ -410,8 +529,151 @@ function parseText(
     content,
     rawAttributes: attributes,
     scalarAttributes,
-    archivedAttributes
+    archivedAttributes,
+    style: parseTextStyle(scalarAttributes, archivedAttributes)
   };
+}
+
+function parseTextStyle(
+  scalarAttributes: Record<string, unknown>,
+  archivedAttributes: ParsedText["archivedAttributes"]
+): TextStyle {
+  const style: TextStyle = {};
+
+  const nsFont = archivedAttributes.NSFont;
+  if (nsFont?.success && isObject(nsFont.decoded) && isObject(nsFont.decoded.unarchived)) {
+    const unarchived = nsFont.decoded.unarchived as Record<string, unknown>;
+    if (typeof unarchived.NSName === "string") {
+      style.fontFamily = unarchived.NSName;
+    }
+    if (typeof unarchived.NSSize === "number") {
+      style.fontSize = unarchived.NSSize;
+    }
+  }
+
+  const nsParagraphStyle = archivedAttributes.NSParagraphStyle;
+  if (
+    nsParagraphStyle?.success &&
+    isObject(nsParagraphStyle.decoded) &&
+    isObject(nsParagraphStyle.decoded.unarchived)
+  ) {
+    const unarchived = nsParagraphStyle.decoded.unarchived as Record<string, unknown>;
+    style.paragraphAlignment = toParagraphAlignment(unarchived.NSAlignment);
+    if (typeof unarchived.NSLineHeightMultiple === "number") {
+      style.lineHeightMultiple = unarchived.NSLineHeightMultiple;
+    }
+  }
+
+  const nsColor = archivedAttributes.NSColor;
+  if (nsColor?.success) {
+    const fontColor = tryExtractRgbColorFromArchive(nsColor.decoded);
+    if (fontColor) {
+      style.fontColor = fontColor;
+    }
+  }
+
+  const underline = getNumberFromUnknown(scalarAttributes.NSUnderline);
+  if (underline !== undefined) {
+    style.underline = underline !== 0;
+  }
+
+  const strikethrough = getNumberFromUnknown(scalarAttributes.NSStrikethrough);
+  if (strikethrough !== undefined) {
+    style.strikethrough = strikethrough !== 0;
+  }
+
+  const superscript = getNumberFromUnknown(scalarAttributes.NSSuperScript);
+  if (superscript !== undefined) {
+    style.superscript = superscript;
+  }
+
+  const baselineOffset = getNumberFromUnknown(scalarAttributes.NSBaselineOffset);
+  if (baselineOffset !== undefined) {
+    style.baselineOffset = baselineOffset;
+  }
+
+  const ligature = getNumberFromUnknown(scalarAttributes.NSLigature);
+  if (ligature !== undefined) {
+    style.ligature = ligature !== 0;
+  }
+
+  return style;
+}
+
+function toParagraphAlignment(value: unknown): TextStyle["paragraphAlignment"] | undefined {
+  if (value === 0 || value === "0") {
+    return "start";
+  }
+  if (value === 1 || value === "1") {
+    return "end";
+  }
+  if (value === 2 || value === "2") {
+    return "center";
+  }
+  return undefined;
+}
+
+function tryExtractRgbColorFromArchive(decoded: unknown): string | undefined {
+  const candidate = findColorString(decoded);
+  if (!candidate) {
+    return undefined;
+  }
+
+  const cleaned = candidate.replaceAll("\0", "").trim();
+  const parts = cleaned
+    .split(/\s+/)
+    .map((part) => Number(part))
+    .filter((value) => Number.isFinite(value));
+
+  if (parts.length < 3) {
+    return undefined;
+  }
+
+  const red = clamp(parts[0], 0, 1);
+  const green = clamp(parts[1], 0, 1);
+  const blue = clamp(parts[2], 0, 1);
+  const alpha = clamp(parts[3] ?? 1, 0, 1);
+
+  const r = Math.round(red * 255);
+  const g = Math.round(green * 255);
+  const b = Math.round(blue * 255);
+
+  if (alpha === 1) {
+    return `rgb(${r},${g},${b})`;
+  }
+
+  return `rgba(${r},${g},${b},${Number(alpha.toFixed(4))})`;
+}
+
+function findColorString(value: unknown): string | undefined {
+  if (typeof value === "string") {
+    const cleaned = value.replaceAll("\0", "").trim();
+    if (/^\d*\.?\d+\s+\d*\.?\d+\s+\d*\.?\d+(\s+\d*\.?\d+)?$/.test(cleaned)) {
+      return cleaned;
+    }
+    return undefined;
+  }
+
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = findColorString(item);
+      if (found) {
+        return found;
+      }
+    }
+    return undefined;
+  }
+
+  if (isObject(value)) {
+    for (const nested of Object.values(value)) {
+      const found = findColorString(nested);
+      if (found) {
+        return found;
+      }
+    }
+  }
+
+  return undefined;
 }
 
 function parseLineType(raw: unknown): LineType | undefined {
@@ -535,4 +797,21 @@ function getNumber(value: unknown): number | undefined {
 
 function getBoolean(value: unknown): boolean | undefined {
   return typeof value === "boolean" ? value : undefined;
+}
+
+function getNumberFromUnknown(value: unknown): number | undefined {
+  if (typeof value === "number") {
+    return value;
+  }
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+  return undefined;
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
 }

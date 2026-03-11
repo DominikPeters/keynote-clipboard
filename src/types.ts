@@ -67,8 +67,27 @@ export interface Color {
   rgba?: ColorRgba;
 }
 
+export interface FillGradientStop {
+  fraction?: number;
+  inflection?: number;
+  color?: Color;
+}
+
+export interface FillGradientFlavor {
+  kind: "linear" | "unknown";
+  linearAngle?: number;
+  raw?: unknown;
+}
+
+export interface FillGradient {
+  opacity?: number;
+  flavor?: FillGradientFlavor;
+  stops?: FillGradientStop[];
+}
+
 export interface Fill {
   color?: Color;
+  gradient?: FillGradient;
 }
 
 export interface StrokeLine {
@@ -85,6 +104,10 @@ export interface Stroke {
 
 export interface ParsedPath {
   bezierPath?: string;
+  space?: {
+    position?: Position;
+    size?: Size;
+  };
 }
 
 export interface DecodedArchiveResult {
@@ -103,6 +126,47 @@ export interface ParsedText {
   rawAttributes: Record<string, unknown>;
   scalarAttributes: Record<string, unknown>;
   archivedAttributes: Record<string, TextArchiveAttribute>;
+  style?: TextStyle;
+}
+
+export interface TextStyle {
+  fontFamily?: string;
+  fontSize?: number;
+  fontColor?: string;
+  paragraphAlignment?: "start" | "center" | "end";
+  lineHeightMultiple?: number;
+  underline?: boolean;
+  strikethrough?: boolean;
+  superscript?: number;
+  baselineOffset?: number;
+  ligature?: boolean;
+}
+
+export interface Insets {
+  top?: number;
+  left?: number;
+  right?: number;
+  bottom?: number;
+}
+
+export interface ShapeLayoutProperties {
+  verticalAlignment?: string;
+  shrinkToFit?: boolean;
+  padding?: Insets;
+}
+
+export interface ShapeShadowValue {
+  color?: Color;
+  opacity?: number;
+  angle?: number;
+  radius?: number;
+  offset?: number;
+  height?: number;
+}
+
+export interface ShapeShadow {
+  dropShadow?: ShapeShadowValue;
+  contactShadow?: ShapeShadowValue;
 }
 
 export interface BaseParsedObject {
@@ -122,6 +186,8 @@ export interface ShapeObject extends BaseParsedObject {
   geometry?: Geometry;
   text?: ParsedText;
   path?: ParsedPath;
+  layoutProperties?: ShapeLayoutProperties;
+  shadow?: ShapeShadow;
 }
 
 export interface ConnectionLineEndAnchor {
@@ -180,4 +246,25 @@ export interface KeynoteClipboardDocument {
   connectionLines: ConnectionLineObject[];
   images: ImageObject[];
   unknownObjects: UnknownObject[];
+}
+
+export interface SvgOptions {
+  canvas?: "auto-bounds";
+  anchorMode?: "center";
+  includeDiagnostics?: boolean;
+  background?: string;
+}
+
+export interface SvgStats {
+  renderedShapes: number;
+  renderedConnectionLines: number;
+  renderedTextNodes: number;
+  renderedImagePlaceholders: number;
+  skippedObjects: number;
+}
+
+export interface SvgResult {
+  svg: string;
+  diagnostics: Diagnostic[];
+  stats: SvgStats;
 }

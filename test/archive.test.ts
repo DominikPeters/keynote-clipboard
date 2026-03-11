@@ -25,4 +25,20 @@ describe("decodeArchivedValue", () => {
     expect(decoded.success).toBe(false);
     expect(decoded.error).toBeDefined();
   });
+
+  it("decodes in runtimes without Buffer", async () => {
+    const raw = await readFile(fixturePath, "utf8");
+    const fixture = JSON.parse(raw) as Record<string, any>;
+    const fontArchive = fixture["0"].text.attributed_string[1].NSFont;
+
+    const originalBuffer = (globalThis as { Buffer?: unknown }).Buffer;
+    try {
+      (globalThis as { Buffer?: unknown }).Buffer = undefined;
+      const decoded = decodeArchivedValue(fontArchive);
+      expect(decoded.success).toBe(true);
+      expect(decoded.decoded).not.toBeNull();
+    } finally {
+      (globalThis as { Buffer?: unknown }).Buffer = originalBuffer;
+    }
+  });
 });
