@@ -1,7 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import {
   onClipboardChange,
-  readClipboard,
   startListening,
   stopListening
 } from "tauri-plugin-clipboard-x-api";
@@ -10,12 +9,9 @@ import {
   KEYNOTE_CLIPBOARD_FORMAT,
   applyClipboardChange,
   convertPayloadToSvg,
-  hasKeynoteFormat,
   type ClipboardState,
   type CustomClipboardPayload
 } from "./clipboardLogic";
-
-type ReadClipboard = Awaited<ReturnType<typeof readClipboard>>;
 
 const ui = {
   refreshBtn: document.querySelector<HTMLButtonElement>("#refresh-btn"),
@@ -38,7 +34,7 @@ function setStatus(message: string, isError = false): void {
   }
 }
 
-function renderStandardClipboard(data: ReadClipboard): void {
+function renderStandardClipboard(data: unknown): void {
   if (ui.standardDump) {
     ui.standardDump.textContent = JSON.stringify(data, null, 2);
   }
@@ -92,29 +88,30 @@ async function refreshClipboard(): Promise<void> {
     const now = new Date();
     state = applyClipboardChange(state, now);
 
-    const [standard, formats] = await Promise.all([
-      readClipboard(),
-      invoke<string[]>("list_clipboard_formats")
-    ]);
+    renderStandardClipboard({
+      refreshedAt: state.lastUpdatedIso,
+      refreshCount: state.refreshCount,
+      keynoteFormat: KEYNOTE_CLIPBOARD_FORMAT
+    });
 
-    const sortedFormats = formats.sort((a, b) => a.localeCompare(b));
-    const hasFormat = hasKeynoteFormat(sortedFormats);
-
-    renderStandardClipboard(standard);
-
-    if (!hasFormat) {
-      renderPayload(null);
-      if (ui.payloadMeta) {
-        ui.payloadMeta.textContent = `${sortedFormats.length} clipboard formats available.`;
-      }
-      clearConversionView("Keynote content is not present on the clipboard.");
-      setStatus(`Loaded ${sortedFormats.length} clipboard formats.`);
-      return;
+    let payload: CustomClipboardPayload | null = null;
+    try {
+      payload = await invoke<CustomClipboardPayload>("read_custom_clipboard_format", {
+        format: KEYNOTE_CLIPBOARD_FORMAT
+      });
+    } catch {
+      payload = null;
     }
 
-    const payload = await invoke<CustomClipboardPayload>("read_custom_clipboard_format", {
-      format: KEYNOTE_CLIPBOARD_FORMAT
-    });
+    if (!payload || payload.format !== KEYNOTE_CLIPBOARD_FORMAT) {
+      renderPayload(null);
+      if (ui.payloadMeta) {
+        ui.payloadMeta.textContent = "Keynote format not found on clipboard.";
+      }
+      clearConversionView("Keynote content is not present on the clipboard.");
+      setStatus("Clipboard checked. Keynote format not present.");
+      return;
+    }
 
     renderPayload(payload);
 
