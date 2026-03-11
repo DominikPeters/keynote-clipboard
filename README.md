@@ -1,8 +1,8 @@
 # keynote-clipboard
 
-![keynote-clipboard logo](https://raw.githubusercontent.com/DominikPeters/keynote-clipboard/main/demo-app/src/assets/keynote-clipboard-logo.svg)
+![keynote-clipboard logo](https://raw.githubusercontent.com/DominikPeters/keynote-clipboard/refs/heads/master/demo-app/src/assets/keynote-clipboard-logo.svg)
 
-`keynote-clipboard` parses Keynote clipboard payloads of type `com.apple.apps.content-language.canvas-object-1.0` into a normalized JavaScript/TypeScript model.
+`keynote-clipboard` parses Keynote clipboard payloads of type `com.apple.apps.content-language.canvas-object-1.0` into a normalized JavaScript/TypeScript model and can convert it to SVG or TikZ.
 
 It is useful when you want to:
 
