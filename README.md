@@ -1,7 +1,6 @@
 # keynote-clipboard
 
-![keynote-clipboard logo](https://raw.githubusercontent.com/DominikPeters/keynote-clipboard/refs/heads/master/demo-app/src/assets/keynote-clipboard-logo.svg)
-
+<img src="https://raw.githubusercontent.com/DominikPeters/keynote-clipboard/refs/heads/master/demo-app/src/assets/keynote-clipboard-logo.svg" alt="keynote-clipboard logo" width="180" align="right" />
 `keynote-clipboard` parses Keynote clipboard payloads of type `com.apple.apps.content-language.canvas-object-1.0` into a normalized JavaScript/TypeScript model and can convert it to SVG or TikZ.
 
 It is useful when you want to:
@@ -11,7 +10,7 @@ It is useful when you want to:
 - render clipboard content as SVG
 - convert simple Keynote graphics into TikZ/LaTeX
 
-The package includes both a library API and a CLI.
+The package includes both a library API and a CLI, as well as a macOS demo app.
 
 ## What It Does
 
