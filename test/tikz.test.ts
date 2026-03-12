@@ -57,11 +57,72 @@ describe("toTikz", () => {
 
     const result = toTikz(parsed.document);
     expect(result.tikz).toContain("\\begin{tikzpicture}");
-    expect(result.tikz).toContain("\\path[");
+    expect(result.tikz).toContain("\\draw[black");
     expect(result.tikz).toContain("fill=red");
-    expect(result.tikz).toContain("draw=black");
+    expect(result.tikz).not.toContain("fill opacity=1");
+    expect(result.tikz).not.toContain("draw opacity=1");
+    expect(result.tikz).not.toContain("draw=none");
     expect(result.tikz).not.toContain("{rgb,255:");
     expect(result.stats.renderedShapes).toBe(1);
+  });
+
+  it("uses \\fill for fill-only shapes", () => {
+    const parsed = parseKeynoteClipboard({
+      "0": {
+        type_identifier: "com.apple.apps.content-language.shape",
+        fill: {
+          color: {
+            rgba: {
+              red: 1,
+              green: 0,
+              blue: 0,
+              alpha: 1
+            }
+          }
+        },
+        stroke: "empty",
+        geometry: {
+          position: { x: 10, y: 10 },
+          size: { width: 20, height: 20 }
+        }
+      }
+    });
+
+    const result = toTikz(parsed.document);
+    expect(result.tikz).toContain("\\fill[red]");
+    expect(result.tikz).not.toContain("draw=none");
+  });
+
+  it("uses \\draw for stroke-only shapes", () => {
+    const parsed = parseKeynoteClipboard({
+      "0": {
+        type_identifier: "com.apple.apps.content-language.shape",
+        stroke: {
+          line: {
+            width: 2,
+            pattern: "solid",
+            color: {
+              rgba: {
+                red: 0,
+                green: 0,
+                blue: 1,
+                alpha: 1
+              }
+            }
+          }
+        },
+        geometry: {
+          position: { x: 10, y: 10 },
+          size: { width: 20, height: 20 }
+        }
+      }
+    });
+
+    const result = toTikz(parsed.document);
+    expect(result.tikz).toContain("\\draw[blue");
+    expect(result.tikz).not.toContain("draw=blue");
+    expect(result.tikz).not.toContain("fill=none");
+    expect(result.tikz).not.toContain("draw opacity=1");
   });
 
   it("renders dash patterns and markers", async () => {
@@ -144,6 +205,8 @@ describe("toTikz", () => {
     expect(result.tikz).toContain("bottom color=red");
     expect(result.tikz).toContain("top color=blue");
     expect(result.tikz).toContain("drop shadow=");
+    expect(result.tikz).toContain("shadow xshift=0pt");
+    expect(result.tikz).toContain("shadow yshift=4.01pt");
   });
 
   it("maps 180deg gradients to right-to-left for axis shading", () => {
@@ -209,7 +272,7 @@ describe("toTikz", () => {
     expect(result.tikz).toContain("shading=kcshade0");
   });
 
-  it("uses pt-to-cm conversion ratio with 2-decimal rounding", () => {
+  it("uses keynote-point to TeX-point conversion for line width", () => {
     const parsed = parseKeynoteClipboard({
       "0": {
         type_identifier: "com.apple.apps.content-language.connection-line",
@@ -238,8 +301,41 @@ describe("toTikz", () => {
     });
 
     const result = toTikz(parsed.document);
-    expect(result.tikz).toContain("line width=2.54cm");
+    expect(result.tikz).toContain("line width=72.54pt");
     expect(result.tikz).toContain("(1.55,1.55)");
+    expect(result.tikz).not.toContain("draw opacity=1");
+  });
+
+  it("emits dash pattern lengths in TeX pt", () => {
+    const parsed = parseKeynoteClipboard({
+      "0": {
+        type_identifier: "com.apple.apps.content-language.connection-line",
+        stroke: {
+          line: {
+            width: 10,
+            pattern: "short_dash",
+            color: {
+              rgba: {
+                red: 0,
+                green: 0,
+                blue: 0,
+                alpha: 1
+              }
+            }
+          }
+        },
+        head: {
+          end_point: { x: 0, y: 0 }
+        },
+        tail: {
+          end_point: { x: 100, y: 0 }
+        }
+      }
+    });
+
+    const result = toTikz(parsed.document);
+    expect(result.tikz).toContain("dash pattern=on 20.07pt off 20.07pt");
+    expect(result.tikz).not.toContain("dash pattern=on 20.07cm");
   });
 
   it("supports standalone wrapping", () => {
@@ -286,6 +382,7 @@ describe("toTikz", () => {
     const result = toTikz(parsed.document, { background: "#0000ff" });
     expect(result.tikz).toContain("fill=blue");
     expect(result.tikz).toContain("text=red");
+    expect(result.tikz).not.toContain("anchor=center");
   });
 
   it("keeps opacity separate from xcolor output", () => {
@@ -325,7 +422,7 @@ describe("toTikz", () => {
 
     const result = toTikz(parsed.document);
     expect(result.tikz).toContain("fill=red");
-    expect(result.tikz).toContain("draw=blue");
+    expect(result.tikz).toContain("\\draw[blue");
     expect(result.tikz).toContain("fill opacity=0.25");
     expect(result.tikz).toContain("draw opacity=0.4");
   });
@@ -377,6 +474,25 @@ describe("toTikz", () => {
     expect(result.tikz).not.toContain("\u200B");
     expect(result.tikz).not.toContain("\u2066");
     expect(result.tikz).not.toContain("\u2069");
+  });
+
+  it("skips text nodes when sanitized text is empty", () => {
+    const parsed = parseKeynoteClipboard({
+      "0": {
+        type_identifier: "com.apple.apps.content-language.shape",
+        stroke: "empty",
+        geometry: {
+          position: { x: 100, y: 100 },
+          size: { width: 120, height: 60 }
+        },
+        text: {
+          attributed_string: ["\u200B", {}]
+        }
+      }
+    });
+
+    const result = toTikz(parsed.document);
+    expect(result.tikz).not.toContain("\\node[");
   });
 
   it("toTikzFromClipboard includes parse and tikz diagnostics", async () => {

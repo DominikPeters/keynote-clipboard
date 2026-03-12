@@ -17,6 +17,7 @@ import type {
 } from "./types.js";
 
 const PT_TO_CM = 2.54 / 72.27;
+const KEYNOTE_PT_TO_TEX_PT = 72.27 / 72;
 
 const DEFAULT_TIKZ_OPTIONS: Required<Pick<TikzOptions, "canvas" | "anchorMode" | "includeDiagnostics" | "standalone">> = {
   canvas: "auto-bounds",
@@ -203,8 +204,7 @@ function renderShape(
   const stroke = toStroke(shape.stroke);
   const markerOption = resolveShapeMarkers(shape);
   const shadowOption = resolveShapeShadow(shape);
-
-  const drawOptions = buildPathOptions(fill, stroke, markerOption, shadowOption);
+  const pathRender = buildShapePathRender(fill, stroke, markerOption, shadowOption);
 
   if (shape.path?.bezierPath) {
     const pathBounds = parsePathBounds(shape.path.bezierPath);
@@ -212,12 +212,12 @@ function renderShape(
     const convertedPath = svgPathToTikz(shape.path.bezierPath, placement.matrix, canvasBounds);
 
     if (convertedPath) {
-      out.push(`  \\path[${drawOptions}] ${convertedPath};`);
+      out.push(`  ${pathRender.command}[${pathRender.options}] ${convertedPath};`);
       renderedShape = true;
     } else if (shape.geometry) {
       const rectPath = rectanglePath(shape.geometry, canvasBounds);
       if (rectPath) {
-        out.push(`  \\path[${drawOptions}] ${rectPath};`);
+        out.push(`  ${pathRender.command}[${pathRender.options}] ${rectPath};`);
         renderedShape = true;
         addDiagnostic({
           code: "tikz-shape-path-fallback",
@@ -230,7 +230,7 @@ function renderShape(
   } else {
     const rectPath = rectanglePath(shape.geometry, canvasBounds);
     if (rectPath) {
-      out.push(`  \\path[${drawOptions}] ${rectPath};`);
+      out.push(`  ${pathRender.command}[${pathRender.options}] ${rectPath};`);
       renderedShape = true;
       addDiagnostic({
         code: "tikz-shape-rect-fallback",
@@ -249,7 +249,7 @@ function renderShape(
   }
 
   const textModel = shape.text;
-  const text = textModel?.content?.trim();
+  const text = textModel ? sanitizeLatexInput(textModel.content).trim() : "";
   if (text && textModel) {
     const textStyle = extractTextStyle(textModel, shape, addDiagnostic, shape.sourceIndex);
     const textPos = textAnchor(shape, fallbackBounds, textStyle.textAnchor);
@@ -294,9 +294,11 @@ function renderConnectionLine(
   const options: string[] = [];
   if (stroke.color !== "none") {
     options.push(`draw=${stroke.color}`);
-    options.push(`draw opacity=${formatTikzNum(stroke.opacity)}`);
+    if (stroke.opacity !== 1) {
+      options.push(`draw opacity=${formatTikzNum(stroke.opacity)}`);
+    }
     if (stroke.widthPt > 0) {
-      options.push(`line width=${formatTikzNum(ptToCmNumber(stroke.widthPt))}cm`);
+      options.push(`line width=${formatTikzNum(keynotePtToTexPt(stroke.widthPt))}pt`);
     }
   } else {
     options.push("draw=none");
@@ -348,10 +350,10 @@ function renderImagePlaceholder(
   const placeholderText = rgbBytesToXcolorColor(68, 68, 68);
 
   out.push(
-    `  \\path[draw=${placeholderStroke},fill=${placeholderFill},line width=${formatTikzNum(ptToCmNumber(1))}cm,dash pattern=on ${formatTikzNum(ptToCmNumber(6))}cm off ${formatTikzNum(ptToCmNumber(4))}cm] (${formatTikzNum(min.x)},${formatTikzNum(min.y)}) rectangle (${formatTikzNum(max.x)},${formatTikzNum(max.y)});`
+    `  \\path[draw=${placeholderStroke},fill=${placeholderFill},line width=${formatTikzNum(keynotePtToTexPt(1))}pt,dash pattern=on ${formatTikzNum(keynotePtToTexPt(6))}pt off ${formatTikzNum(keynotePtToTexPt(4))}pt] (${formatTikzNum(min.x)},${formatTikzNum(min.y)}) rectangle (${formatTikzNum(max.x)},${formatTikzNum(max.y)});`
   );
   out.push(
-    `  \\node[anchor=center,text=${placeholderText},font=\\fontsize{12}{14.4}\\selectfont] at (${formatTikzNum(center.x)},${formatTikzNum(center.y)}) {${escapeLatex(label)}};`
+    `  \\node[text=${placeholderText},font=\\fontsize{12}{14.4}\\selectfont] at (${formatTikzNum(center.x)},${formatTikzNum(center.y)}) {${escapeLatex(label)}};`
   );
 
   return true;
@@ -409,15 +411,17 @@ function buildPathOptions(
     options.push("fill=none");
   }
 
-  if (fill.fillOpacity !== undefined) {
+  if (fill.fillOpacity !== undefined && fill.fillOpacity !== 1) {
     options.push(`fill opacity=${formatTikzNum(fill.fillOpacity)}`);
   }
 
   if (stroke.color !== "none") {
     options.push(`draw=${stroke.color}`);
-    options.push(`draw opacity=${formatTikzNum(stroke.opacity)}`);
+    if (stroke.opacity !== 1) {
+      options.push(`draw opacity=${formatTikzNum(stroke.opacity)}`);
+    }
     if (stroke.widthPt > 0) {
-      options.push(`line width=${formatTikzNum(ptToCmNumber(stroke.widthPt))}cm`);
+      options.push(`line width=${formatTikzNum(keynotePtToTexPt(stroke.widthPt))}pt`);
     }
   } else {
     options.push("draw=none");
@@ -437,6 +441,84 @@ function buildPathOptions(
   }
 
   return options.join(",");
+}
+
+function buildShapePathRender(
+  fill: {
+    fillColor?: string;
+    fillOpacity?: number;
+    shadingName?: string;
+    shadingAngle?: number;
+    shadingKind?: "axis";
+    leftColor?: string;
+    rightColor?: string;
+    topColor?: string;
+    bottomColor?: string;
+    middleColor?: string;
+  },
+  stroke: TikzStroke,
+  markerOption: string | undefined,
+  shadowOption: string | undefined
+): { command: "\\path" | "\\fill" | "\\draw"; options: string } {
+  if (fill.shadingKind === "axis" || fill.shadingName) {
+    return {
+      command: "\\path",
+      options: buildPathOptions(fill, stroke, markerOption, shadowOption)
+    };
+  }
+
+  const options: string[] = [];
+  const hasFill = Boolean(fill.fillColor);
+  const hasStroke = stroke.color !== "none";
+  let command: "\\path" | "\\fill" | "\\draw" = "\\path";
+
+  if (hasFill && hasStroke) {
+    command = "\\draw";
+  } else if (hasFill) {
+    command = "\\fill";
+  } else if (hasStroke) {
+    command = "\\draw";
+  }
+
+  if (hasStroke) {
+    if (command === "\\draw") {
+      options.push(stroke.color);
+    } else {
+      options.push(`draw=${stroke.color}`);
+    }
+    if (stroke.opacity !== 1) {
+      options.push(`draw opacity=${formatTikzNum(stroke.opacity)}`);
+    }
+    if (stroke.widthPt > 0) {
+      options.push(`line width=${formatTikzNum(keynotePtToTexPt(stroke.widthPt))}pt`);
+    }
+  }
+
+  if (hasFill) {
+    if (command === "\\fill") {
+      options.push(fill.fillColor);
+    } else {
+      options.push(`fill=${fill.fillColor}`);
+    }
+    if (fill.fillOpacity !== undefined && fill.fillOpacity !== 1) {
+      options.push(`fill opacity=${formatTikzNum(fill.fillOpacity)}`);
+    }
+  }
+
+  if (stroke.dasharray) {
+    options.push(stroke.dasharray);
+  }
+  if (stroke.linecap) {
+    options.push("line cap=round");
+  }
+  if (markerOption) {
+    options.push(markerOption);
+  }
+  if (shadowOption) {
+    options.push(shadowOption);
+  }
+
+  return { command, options: options.join(",") };
 }
 
 function resolveShapeFill(
@@ -620,7 +702,7 @@ function resolveShapeShadow(shape: ShapeObject): string | undefined {
   const color = rgbaToTikzColor(selected.color?.rgba?.red, selected.color?.rgba?.green, selected.color?.rgba?.blue);
   const opacity = clamp((selected.opacity ?? 1) * (selected.color?.rgba?.alpha ?? 1), 0, 1);
 
-  return `drop shadow={shadow xshift=${formatTikzNum(ptToCmNumber(dxPt))}cm,shadow yshift=${formatTikzNum(ptToCmNumber(dyPtUp))}cm,opacity=${formatTikzNum(opacity)},fill=${color}}`;
+  return `drop shadow={shadow xshift=${formatTikzNum(keynotePtToTexPt(dxPt))}pt,shadow yshift=${formatTikzNum(keynotePtToTexPt(dyPtUp))}pt,opacity=${formatTikzNum(opacity)},fill=${color}}`;
 }
 
 function resolveShapeMarkers(shape: ShapeObject): string | undefined {
@@ -714,7 +796,7 @@ function mapDashPattern(
 
   const w = Math.max(widthPt, 0.1);
   const onOff = (on: number, off: number): string => {
-    return `dash pattern=on ${formatTikzNum(ptToCmNumber(on))}cm off ${formatTikzNum(ptToCmNumber(off))}cm`;
+    return `dash pattern=on ${formatTikzNum(keynotePtToTexPt(on))}pt off ${formatTikzNum(keynotePtToTexPt(off))}pt`;
   };
 
   switch (pattern) {
@@ -820,10 +902,12 @@ function buildTextNodeOptions(
     fontParts.push("\\itshape");
   }
   const options = [
-    `anchor=${anchor}`,
     `text=${style.fill}`,
     `font=${fontParts.join("")}`
   ];
+  if (anchor !== "center") {
+    options.unshift(`anchor=${anchor}`);
+  }
 
   return options.join(",");
 }
@@ -1307,6 +1391,10 @@ function toTikzPoint(xPt: number, yPt: number, canvasBounds: Bounds): Position {
 
 function ptToCmNumber(valuePt: number): number {
   return round2(valuePt * PT_TO_CM);
+}
+
+function keynotePtToTexPt(valuePt: number): number {
+  return round2(valuePt * KEYNOTE_PT_TO_TEX_PT);
 }
 
 function round2(value: number): number {
