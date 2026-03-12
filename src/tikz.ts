@@ -494,11 +494,12 @@ function buildShapePathRender(
     }
   }
 
-  if (hasFill) {
+  if (hasFill && fill.fillColor) {
+    const fillColor = fill.fillColor;
     if (command === "\\fill") {
-      options.push(fill.fillColor);
+      options.push(fillColor);
     } else {
-      options.push(`fill=${fill.fillColor}`);
+      options.push(`fill=${fillColor}`);
     }
     if (fill.fillOpacity !== undefined && fill.fillOpacity !== 1) {
       options.push(`fill opacity=${formatTikzNum(fill.fillOpacity)}`);
