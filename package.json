@@ -1,6 +1,6 @@
 {
   "name": "keynote-clipboard",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Parser for Keynote clipboard canvas objects",
   "type": "module",
   "main": "./dist/index.js",
@@ -53,7 +53,8 @@
   "sideEffects": false,
   "license": "MIT",
   "dependencies": {
-    "@skgrush/bplist-and-nskeyedunarchiver": "^0.0.1-rc.2"
+    "@skgrush/bplist-and-nskeyedunarchiver": "^0.0.1-rc.2",
+    "xcolor-rgb-convert": "^1.0.0"
   },
   "devDependencies": {
     "@types/node": "^24.6.0",

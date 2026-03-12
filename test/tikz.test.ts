@@ -58,6 +58,9 @@ describe("toTikz", () => {
     const result = toTikz(parsed.document);
     expect(result.tikz).toContain("\\begin{tikzpicture}");
     expect(result.tikz).toContain("\\path[");
+    expect(result.tikz).toContain("fill=red");
+    expect(result.tikz).toContain("draw=black");
+    expect(result.tikz).not.toContain("{rgb,255:");
     expect(result.stats.renderedShapes).toBe(1);
   });
 
@@ -138,8 +141,8 @@ describe("toTikz", () => {
 
     const result = toTikz(parsed.document);
     expect(result.tikz).toContain("shading=axis");
-    expect(result.tikz).toContain("bottom color={rgb,255:red,255;green,0;blue,0}");
-    expect(result.tikz).toContain("top color={rgb,255:red,0;green,0;blue,255}");
+    expect(result.tikz).toContain("bottom color=red");
+    expect(result.tikz).toContain("top color=blue");
     expect(result.tikz).toContain("drop shadow=");
   });
 
@@ -170,8 +173,8 @@ describe("toTikz", () => {
 
     const result = toTikz(parsed.document);
     expect(result.tikz).toContain("shading=axis");
-    expect(result.tikz).toContain("left color={rgb,255:red,0;green,0;blue,255}");
-    expect(result.tikz).toContain("right color={rgb,255:red,255;green,0;blue,0}");
+    expect(result.tikz).toContain("left color=blue");
+    expect(result.tikz).toContain("right color=red");
     expect(result.tikz).not.toContain("shading angle=");
   });
 
@@ -255,6 +258,76 @@ describe("toTikz", () => {
     expect(result.tikz).toContain("\\documentclass[tikz]{standalone}");
     expect(result.tikz).toContain("\\begin{document}");
     expect(result.tikz).toContain("\\end{document}");
+  });
+
+  it("uses xcolor parsing for CSS-like text and background colors", () => {
+    const parsed = parseKeynoteClipboard({
+      "0": {
+        type_identifier: "com.apple.apps.content-language.shape",
+        stroke: "empty",
+        geometry: {
+          position: { x: 10, y: 10 },
+          size: { width: 120, height: 60 }
+        },
+        text: {
+          attributed_string: ["Colorized", {}]
+        }
+      }
+    });
+
+    const text = parsed.document.shapes[0].text;
+    if (text) {
+      text.style = {
+        ...text.style,
+        fontColor: "rgb(255, 0, 0)"
+      };
+    }
+
+    const result = toTikz(parsed.document, { background: "#0000ff" });
+    expect(result.tikz).toContain("fill=blue");
+    expect(result.tikz).toContain("text=red");
+  });
+
+  it("keeps opacity separate from xcolor output", () => {
+    const parsed = parseKeynoteClipboard({
+      "0": {
+        type_identifier: "com.apple.apps.content-language.shape",
+        fill: {
+          color: {
+            rgba: {
+              red: 1,
+              green: 0,
+              blue: 0,
+              alpha: 0.25
+            }
+          }
+        },
+        stroke: {
+          line: {
+            width: 2,
+            pattern: "solid",
+            color: {
+              rgba: {
+                red: 0,
+                green: 0,
+                blue: 1,
+                alpha: 0.4
+              }
+            }
+          }
+        },
+        geometry: {
+          position: { x: 10, y: 10 },
+          size: { width: 20, height: 20 }
+        }
+      }
+    });
+
+    const result = toTikz(parsed.document);
+    expect(result.tikz).toContain("fill=red");
+    expect(result.tikz).toContain("draw=blue");
+    expect(result.tikz).toContain("fill opacity=0.25");
+    expect(result.tikz).toContain("draw opacity=0.4");
   });
 
   it("renders italic text styling in tikz nodes", () => {

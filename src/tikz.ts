@@ -1,4 +1,5 @@
 import { parseKeynoteClipboard } from "./parser.js";
+import { parseColorInput, rgbToXcolorExpression } from "xcolor-rgb-convert";
 import type {
   ConnectionLineObject,
   Diagnostic,
@@ -342,12 +343,15 @@ function renderImagePlaceholder(
   const min = toTikzPoint(bounds.minX, bounds.maxY, canvasBounds);
   const max = toTikzPoint(bounds.maxX, bounds.minY, canvasBounds);
   const center = toTikzPoint((bounds.minX + bounds.maxX) / 2, (bounds.minY + bounds.maxY) / 2, canvasBounds);
+  const placeholderStroke = rgbBytesToXcolorColor(102, 102, 102);
+  const placeholderFill = rgbBytesToXcolorColor(245, 245, 245);
+  const placeholderText = rgbBytesToXcolorColor(68, 68, 68);
 
   out.push(
-    `  \\path[draw={rgb,255:red,102;green,102;blue,102},fill={rgb,255:red,245;green,245;blue,245},line width=${formatTikzNum(ptToCmNumber(1))}cm,dash pattern=on ${formatTikzNum(ptToCmNumber(6))}cm off ${formatTikzNum(ptToCmNumber(4))}cm] (${formatTikzNum(min.x)},${formatTikzNum(min.y)}) rectangle (${formatTikzNum(max.x)},${formatTikzNum(max.y)});`
+    `  \\path[draw=${placeholderStroke},fill=${placeholderFill},line width=${formatTikzNum(ptToCmNumber(1))}cm,dash pattern=on ${formatTikzNum(ptToCmNumber(6))}cm off ${formatTikzNum(ptToCmNumber(4))}cm] (${formatTikzNum(min.x)},${formatTikzNum(min.y)}) rectangle (${formatTikzNum(max.x)},${formatTikzNum(max.y)});`
   );
   out.push(
-    `  \\node[anchor=center,text={rgb,255:red,68;green,68;blue,68},font=\\fontsize{12}{14.4}\\selectfont] at (${formatTikzNum(center.x)},${formatTikzNum(center.y)}) {${escapeLatex(label)}};`
+    `  \\node[anchor=center,text=${placeholderText},font=\\fontsize{12}{14.4}\\selectfont] at (${formatTikzNum(center.x)},${formatTikzNum(center.y)}) {${escapeLatex(label)}};`
   );
 
   return true;
@@ -1425,7 +1429,7 @@ function rgbaToTikzColor(red?: number, green?: number, blue?: number): string {
   const r = clamp(Math.round(red * 255), 0, 255);
   const g = clamp(Math.round(green * 255), 0, 255);
   const b = clamp(Math.round(blue * 255), 0, 255);
-  return `{rgb,255:red,${r};green,${g};blue,${b}}`;
+  return rgbBytesToXcolorColor(r, g, b);
 }
 
 function cssColorToTikzColor(input: string | undefined): string | undefined {
@@ -1433,36 +1437,28 @@ function cssColorToTikzColor(input: string | undefined): string | undefined {
     return undefined;
   }
 
-  const rgb = input.match(/^rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)$/i);
-  if (rgb) {
-    const r = clamp(Number(rgb[1]), 0, 255);
-    const g = clamp(Number(rgb[2]), 0, 255);
-    const b = clamp(Number(rgb[3]), 0, 255);
-    return `{rgb,255:red,${r};green,${g};blue,${b}}`;
-  }
-
-  const rgba = input.match(/^rgba\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d*\.?\d+)\s*\)$/i);
-  if (rgba) {
-    const r = clamp(Number(rgba[1]), 0, 255);
-    const g = clamp(Number(rgba[2]), 0, 255);
-    const b = clamp(Number(rgba[3]), 0, 255);
-    return `{rgb,255:red,${r};green,${g};blue,${b}}`;
-  }
-
-  const hex = input.match(/^#([0-9a-f]{6})$/i);
-  if (hex) {
-    const value = hex[1];
-    const r = Number.parseInt(value.slice(0, 2), 16);
-    const g = Number.parseInt(value.slice(2, 4), 16);
-    const b = Number.parseInt(value.slice(4, 6), 16);
-    return `{rgb,255:red,${r};green,${g};blue,${b}}`;
-  }
-
   if (input === "none") {
     return "none";
   }
 
+  const parsed = parseColorInput(input);
+  if (parsed) {
+    return rgbBytesToXcolorColor(parsed.rgb.r, parsed.rgb.g, parsed.rgb.b);
+  }
+
   return "black";
+}
+
+function rgbBytesToXcolorColor(r: number, g: number, b: number): string {
+  const clampedR = clamp(Math.round(r), 0, 255);
+  const clampedG = clamp(Math.round(g), 0, 255);
+  const clampedB = clamp(Math.round(b), 0, 255);
+
+  try {
+    return rgbToXcolorExpression({ r: clampedR, g: clampedG, b: clampedB }, { mode: "release" }).expression;
+  } catch {
+    return "black";
+  }
 }
 
 function escapeLatex(value: string): string {
